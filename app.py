@@ -1,10 +1,17 @@
 from flask import Flask,render_template,request,url_for,redirect
 import pyrebase
 import json
+from script import Speech
 from time import gmtime, strftime
+import speech_recognition as sr
+from thread import ContinuousThread
+from queue import Queue
+from cheroot.wsgi import Server as WSGIServer
 
 #flask setup
 app = Flask(__name__)
+
+threads = []
 
 #firebase setup
 with open("config.json",'r') as configuration_file:
@@ -13,6 +20,9 @@ with open("config.json",'r') as configuration_file:
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
 auth = firebase.auth()
+
+def get_name(user):
+    return user['email'].split('@')[0]
 
 @app.route('/login',methods=['POST','GET'])
 def login():
@@ -52,7 +62,7 @@ def home():
             add_appointment()
             return redirect(url_for("home"))
 
-        name = auth.current_user['email'].split('@')[0]
+        name = get_name(auth.current_user)
 
         patients = db.child("Appointments").child(name).get().val()
 
@@ -69,9 +79,39 @@ def home():
     else:
         return redirect(url_for('login'))
 
-@app.route('/bot')
+@app.route('/bot',methods=['GET','POST'])
 def bot():
-    return "bot"
+    r = sr.Recognizer()
+    m = sr.Microphone()
+    def add_audio_to_queue(audio_queue,r,m):
+        try:
+            with m as source:
+                audio_queue.put(r.listen(source))
+        except KeyboardInterrupt:
+            pass
+
+    audio_queue = Queue()
+    if(auth.current_user):
+        speech = Speech(auth.current_user)
+        if(request.method == 'POST'):
+            if(request.form['stop_bot']=='stop'):
+                audio_queue=Queue()
+                audio_queue.put(None)
+                for i in threads:
+                    i.stop()
+                    i.join()
+
+                return redirect(url_for('home'))
+
+        t1 = ContinuousThread(target=add_audio_to_queue,args=[audio_queue,r,m],daemon=True)
+        t2 = ContinuousThread(target=speech.recognize_worker,args=[audio_queue,db,r],daemon=True)
+        t1.start()
+        t2.start()
+        threads.append(t1)
+        threads.append(t2)
+    else:
+        return redirect(url_for('login'))
+    return render_template('bot.html')
 
 @app.route('/logout')
 def logout():

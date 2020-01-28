@@ -22,29 +22,28 @@ class Speech:
     def getJSON(self,text):
         return json.dumps(self.getDict(text))
 
-    def recognize_worker(self):
-        while True:
-            audio = audio_queue.get()
-            try:
-                if audio is None: return
+    def recognize_worker(self,audio_queue,db,r):
+        audio = audio_queue.get()
+        try:
+            if audio is None: return
 
-                text = r.recognize_google(audio)
+            text = r.recognize_google(audio)
 
-                x = str(self.user['email']).split('@')
+            x = str(self.user['email']).split('@')[0]
 
-                db.child("Doctor").child(x).push(self.getDict(text),self.user['idToken'])
+            db.child("Convo").child(x).push(self.getDict(text),self.user['idToken'])
 
-                print(f"sent to firebase: {text}")
+            print(f"sent to firebase: {text}")
 
-            except sr.UnknownValueError:
-                print("Google Speech Recognition could not understand audio")
-            except sr.RequestError as e:
-                print(f"Could not request results from Google Speech Recognition service; {e}")
-            except AssertionError:
-                return
-            finally:
-                audio_queue.task_done()
-                
+        except sr.UnknownValueError:
+            print("Google Speech Recognition could not understand audio")
+        except sr.RequestError as e:
+            print(f"Could not request results from Google Speech Recognition service; {e}")
+        except AssertionError:
+            return
+        finally:
+            audio_queue.task_done()
+
 if __name__ == '__main__':
 
     with open("config.json",'r') as configuration_file:

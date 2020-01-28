@@ -15,11 +15,16 @@
       <th>Patient</th>
       <th>Time</th>
    </tr>
-   
+
    {% for patient in patients %}
    <tr>
       <td data-th="name">{{patient['name']}}</td>
       <td data-th="time">{{patient['time']}}</td>
    </tr>
    {% endfor %}
+
 </table>
+
+<div class="bot">
+  <button type="button" name="bot_button" href="{{url_for('bot')}}"></button>
+</div>

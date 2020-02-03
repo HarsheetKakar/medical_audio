@@ -6,12 +6,14 @@ from time import gmtime, strftime
 import speech_recognition as sr
 from thread import ContinuousThread
 from queue import Queue
-from cheroot.wsgi import Server as WSGIServer
-
+import werkzeug
+import threading
+from datetime import datetime
 #flask setup
 app = Flask(__name__)
 
 threads = []
+audio_queue = Queue()
 
 #firebase setup
 with open("config.json",'r') as configuration_file:
@@ -57,61 +59,54 @@ def signup():
 @app.route('/home')
 @app.route('/',methods=['GET','POST'])
 def home():
+    global audio_queue
+    def gen(patients):
+        if(not patients):
+            return
+
+        for i,v in patients.items():
+            yield v
+
     if(auth.current_user):
         if(request.method=='POST'):
-            add_appointment()
-            return redirect(url_for("home"))
+            try:
+                if(request.form['bot_start']=='start'):
+                    bot()
+
+            except werkzeug.exceptions.BadRequestKeyError:
+                if(threads):
+                    audio_queue=Queue()
+                    audio_queue.put(None)
+                    for i in threads:
+                        i.stop()
 
         name = get_name(auth.current_user)
-
         patients = db.child("Appointments").child(name).get().val()
-
-        def gen(patients):
-            if(not patients):
-                return
-
-            for i,v in patients.items():
-                yield v
-
         patients = gen(patients)
 
         return render_template("home.html",patients=patients if patients else [],doctor={"name":"Dr. "+name})
     else:
         return redirect(url_for('login'))
 
-@app.route('/bot',methods=['GET','POST'])
+def add_audio_to_queue(audio_queue):
+    try:
+        r = sr.Recognizer()
+        with sr.Microphone() as source:
+            audio_queue.put(r.listen(source))
+    except KeyboardInterrupt:
+        pass
+
 def bot():
     r = sr.Recognizer()
-    m = sr.Microphone()
-    def add_audio_to_queue(audio_queue,r,m):
-        try:
-            with m as source:
-                audio_queue.put(r.listen(source))
-        except KeyboardInterrupt:
-            pass
-
-    audio_queue = Queue()
     if(auth.current_user):
         speech = Speech(auth.current_user)
-        if(request.method == 'POST'):
-            if(request.form['stop_bot']=='stop'):
-                audio_queue=Queue()
-                audio_queue.put(None)
-                for i in threads:
-                    i.stop()
-                    i.join()
-
-                return redirect(url_for('home'))
-
-        t1 = ContinuousThread(target=add_audio_to_queue,args=[audio_queue,r,m],daemon=True)
+        t1 = ContinuousThread(target=add_audio_to_queue,args=[audio_queue],daemon=True)
         t2 = ContinuousThread(target=speech.recognize_worker,args=[audio_queue,db,r],daemon=True)
         t1.start()
         t2.start()
         threads.append(t1)
         threads.append(t2)
-    else:
-        return redirect(url_for('login'))
-    return render_template('bot.html')
+        return threads
 
 @app.route('/logout')
 def logout():

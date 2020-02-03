@@ -5,10 +5,11 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 <h1>Today's appointments</h1>
 <h2>{{doctor['name']}}</h2>
-<form class="add_appointment" action="{{url_for('home')}}" method="post">
-  <input type="text" name="patient_name" placeholder="Name">
-  <input type="time" name="patient_time" placeholder="Time">
-  <button type="submit" class="btn btn-danger" >Add</button>
+<form class="bot_form" action="{{url_for('home')}}" method="post" name="add_appointment">
+  <div class="bot">
+    <input type="submit" name="bot_start" value="start">
+    <input type="submit" name="bot_stop" value="stop">
+  </div>
 </form>
 <table class="rwd-table">
    <tr>
@@ -24,7 +25,3 @@
    {% endfor %}
 
 </table>
-
-<div class="bot">
-  <button type="button" name="bot_button" href="{{url_for('bot')}}"></button>
-</div>

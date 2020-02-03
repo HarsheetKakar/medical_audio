@@ -1,8 +1,8 @@
-from threading import Thread
+import threading
 
-class ContinuousThread(Thread):
+class ContinuousThread(threading.Thread):
     def __init__(self, group=None, target=None, name=None,args=(), kwargs=None, verbose=None,daemon=False):
-        super(ContinuousThread,self).__init__(group=group, target=target, name=name,daemon=daemon)
+        super(ContinuousThread,self).__init__(target=target, name=name,daemon=daemon)
         self.running=True
         self._args=args
         self._kwargs=kwargs
@@ -14,3 +14,4 @@ class ContinuousThread(Thread):
 
     def stop(self):
         self.running = False
+        self.join()

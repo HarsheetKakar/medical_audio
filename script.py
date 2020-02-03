@@ -1,12 +1,7 @@
-from threading import Thread
-from queue import Queue
 import speech_recognition as sr
 from time import gmtime, strftime
 import pyrebase
 import json
-
-r = sr.Recognizer()
-audio_queue = Queue()
 
 class Speech:
     def __init__(self,user):
@@ -42,7 +37,7 @@ class Speech:
         except AssertionError:
             return
         finally:
-            audio_queue.task_done()
+            pass
 
 if __name__ == '__main__':
 

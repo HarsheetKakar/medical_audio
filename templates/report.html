@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Report {{patient_name}}</title>
+  </head>
+  <body>
+    <form action="{{url_for('report')}}" method="post">
+      <p>{{patient_name}}</p>
+      Symptoms:
+      <textarea name="symptoms" style="height:200px">
+        {% for i in symptoms %}
+          {{i}}
+        {% endfor %}
+      </textarea>
+      <br>
+      Tests:
+      <textarea name="tests" style="height:200px">
+        {% for i in tests %}
+          {{i}}
+        {% endfor %}
+      </textarea>
+      <br>
+      Medicines:
+      <textarea name="medicines" style="height:200px">
+        {% for i in medicines %}
+          {{i}}
+        {% endfor %}
+      </textarea>
+      <br>
+      Diagnosis:
+      <textarea name="diagnosis" style="height:200px">
+        {% for i in diagnosis %}
+          {{i}}
+        {% endfor %}
+      </textarea>
+      <br>
+      <input type="submit" value="Make Report">
+    </form>
+  </body>
+</html>

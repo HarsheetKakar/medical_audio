@@ -11,6 +11,7 @@
     <input type="submit" name="bot_stop" value="stop">
   </div>
 </form>
+<a href="{{url_for('report')}}">Report</a>
 <table class="rwd-table">
    <tr>
       <th>Patient</th>
@@ -23,5 +24,7 @@
       <td data-th="time">{{patient['time']}}</td>
    </tr>
    {% endfor %}
-
 </table>
+<div class=chatbot style="text-align:right; margin:0px auto 0px auto;" >
+   <iframe class="frame" width="350" height="430" allow="microphone;" src="https://console.dialogflow.com/api-client/demo/embedded/c148c951-47f5-4322-b65b-a53b7d56158f"></iframe>
+</div>

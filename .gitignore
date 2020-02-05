@@ -130,3 +130,9 @@ dmypy.json
 
 # firebase configuration
 config.json
+
+# docs configuration
+docs_config.json
+
+# pickle of docs
+token.pickle

@@ -1,7 +1,6 @@
-from flask import Flask,render_template,request,url_for,redirect
-import pyrebase
+from flask import render_template,request,url_for,redirect
 import json
-from script import Speech
+from speech import Speech
 from time import gmtime, strftime
 import speech_recognition as sr
 from thread import ContinuousThread
@@ -9,22 +8,16 @@ from queue import Queue
 import werkzeug
 import threading
 from datetime import datetime
-#flask setup
+from report import Report
+from pprint import pprint
+from models import Doctor, Patient
+from flask import Flask
+from firebase import *
+
 app = Flask(__name__)
 
 threads = []
 audio_queue = Queue()
-
-#firebase setup
-with open("config.json",'r') as configuration_file:
-    config = json.loads(configuration_file.read())
-
-firebase = pyrebase.initialize_app(config)
-db = firebase.database()
-auth = firebase.auth()
-
-def get_name(user):
-    return user['email'].split('@')[0]
 
 @app.route('/login',methods=['POST','GET'])
 def login():
@@ -46,9 +39,13 @@ def signup():
     if(request.method == "POST"):
         email = request.form['email']
         password = request.form['password']
+        name = request.form['name']
+        spl = request.form['spl']
+        hospital_name = request.form['hospital_name']
         try:
             if(email and password):
                 user = auth.create_user_with_email_and_password(email,password)
+                db.child('Doctors').child(user['localId']).push(request.form)
             return redirect(url_for('login'))
         except Exception as e:
             print(f"error : {e}")
@@ -80,9 +77,10 @@ def home():
                     for i in threads:
                         i.stop()
 
-        name = get_name(auth.current_user)
-        patients = db.child("Appointments").child(name).get().val()
-        patients = gen(patients)
+        name = Doctor(auth.current_user).get_name()
+        print(name)
+        #patients = db.child("Appointments").child(name).get().val()
+        patients = None
 
         return render_template("home.html",patients=patients if patients else [],doctor={"name":"Dr. "+name})
     else:
@@ -107,6 +105,43 @@ def bot():
         threads.append(t1)
         threads.append(t2)
         return threads
+
+@app.route("/report",methods=['GET','POST'])
+def report():
+    if(auth.current_user):
+        if(request.method=='POST'):
+            rep = Report(SCOPES=['https://www.googleapis.com/auth/drive.metadata.readonly',
+                            'https://www.googleapis.com/auth/documents',
+                            'https://www.googleapis.com/auth/drive'])
+            doc = Doctor(auth.current_user)
+            hospital = Hospital(auth.current_user)
+            #make patient database
+            data = {
+                "hospital_name":hospital.get_name(),
+                "doctor_name":doc.get_name(),
+                "doctor_speciality":doc.get_spl(),
+                "hospital_address":hospital.get_address(),
+                "pat_address":"{{abc}}",
+                "hospital_phone":hospital.get_phone(),
+                "pat_id":"{{1}}",
+                "pat_age":"{{20}}",
+                "pat_name":"{{harsheet}}",
+                "symptoms":request.form['symptoms'],
+                "tests":request.form['tests'],
+                "medicines":request.form['medicines'],
+                "hospital_email":hospital.get_email(),
+                "diagnosis": request.form['diagnosis']
+            }
+            #feed it to database
+            report_url = rep.form_report(data)
+            return redirect(url_for('home'))
+        return render_template('report.html',
+                                symptoms = ["{{fever}}"],
+                                tests =["{{test}}"],
+                                diagnosis=["{{disease}}"],
+                                medicines = ['{{par}}'])
+    else:
+        return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
